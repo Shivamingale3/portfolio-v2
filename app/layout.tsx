@@ -1,7 +1,8 @@
+import { SnackbarProvider } from "@/components/snackbar/SnackbarProvider";
 import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "@/components/ui/toaster";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { CssBaseline } from "@mui/material";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -28,8 +29,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
-          <Toaster />
+          <SnackbarProvider>
+            <CssBaseline />
+            {children}
+          </SnackbarProvider>
         </ThemeProvider>
       </body>
     </html>

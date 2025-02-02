@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "@/components/ui/use-toast";
 import { useState } from "react";
 
 export default function AboutPage() {
@@ -28,10 +27,6 @@ export default function AboutPage() {
   const handleSave = () => {
     setAbout(editedAbout);
     setIsEditing(false);
-    toast({
-      title: "Changes saved",
-      description: "Your about section has been updated successfully.",
-    });
   };
 
   return (

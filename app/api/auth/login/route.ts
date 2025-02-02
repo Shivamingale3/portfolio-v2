@@ -1,15 +1,101 @@
-import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+import axios from "axios";
 
-export async function POST(request: Request) {
-  const { username, password } = await request.json()
+export const NEXT_PUBLIC_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-  // In a real application, you would validate the credentials against a database
-  if (username === 'admin' && password === 'password') {
-    cookies().set('auth', 'true', { httpOnly: true, secure: true })
-    return NextResponse.json({ success: true })
+export async function loginUser({
+  email,
+  password,
+}: {
+  email: string;
+  password: string;
+}): Promise<boolean> {
+  try {
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/login`,
+      { email, password },
+      {
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+
+    if (response.status === 200 && response.data.token) {
+      localStorage.setItem("token", response.data.token); // Store token in localStorage
+      return true;
+    }
+    throw new Error("Login failed");
+  } catch (error) {
+    console.error("Login error:", error);
+    return false;
   }
-
-  return NextResponse.json({ success: false }, { status: 401 })
 }
 
+export async function sendResetPasswordOTP(email: string) {
+  try {
+    const response = await axios.post(
+      `${NEXT_PUBLIC_BACKEND_URL}/auth/send-reset-password-mail`,
+      { email },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      }
+    );
+
+    if (response.status === 200) {
+      return true;
+    }
+    throw new Error(`OTP sending failed : ${JSON.stringify(response.data)}`);
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function submitOTP(email: string, otp: string) {
+  try {
+    const response = await axios.post(
+      `${NEXT_PUBLIC_BACKEND_URL}/auth/verify-otp`,
+      { email, otp },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      }
+    );
+    if (response.status === 200) {
+      return true;
+    }
+    throw new Error(`OTP submission failed : ${JSON.stringify(response.data)}`);
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function resetPassword({
+  email,
+  password,
+}: {
+  email: string;
+  password: string;
+}) {
+  try {
+    const response = await axios.post(
+      `${NEXT_PUBLIC_BACKEND_URL}/users/reset-password`,
+      { email, password },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      }
+    );
+
+    if (response.status === 200) {
+      return true;
+    }
+    throw new Error(`Password reset failed : ${JSON.stringify(response.data)}`);
+  } catch (error) {
+    throw error;
+  }
+}

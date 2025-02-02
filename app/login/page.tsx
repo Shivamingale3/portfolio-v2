@@ -5,52 +5,49 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-//import { auth } from '@/lib/firebase'
-//import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
+import { loginUser } from "../api/auth/login/route";
+import { useSnackbarContext } from "@/components/snackbar/SnackbarProvider";
 
 export default function Login() {
+  const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
-  const { toast } = useToast();
+  const { addSnackbar } = useSnackbarContext();
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     try {
-      //await signInWithEmailAndPassword(auth, email, password)
-      router.push("/dashboard");
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Invalid credentials",
-        variant: "destructive",
+      const result = await loginUser({ email, password });
+      if (result) {
+        addSnackbar({
+          header: "Login Successful",
+          description: "You have successfully logged in.",
+          status: "success",
+          timeout: 5000,
+        });
+        router.push("/dashboard");
+      }
+    } catch (error: any) {
+      addSnackbar({
+        header: "Login Failed",
+        description: error.message,
+        expandedContent: JSON.stringify(error),
+        status: "error",
+        timeout: 5000,
       });
     }
+    setLoading(false);
   };
-
-  //const handleGoogleLogin = async () => {
-  // const provider = new GoogleAuthProvider()
-  //try {
-  // await signInWithPopup(auth, provider)
-  //router.push('/dashboard')
-  //} catch (error) {
-  // toast({
-  //  title: "Error",
-  // description: "Failed to sign in with Google",
-  //variant: "destructive",
-  //})
-  //}
-  //}
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-300 dark:from-gray-900 dark:to-black">
@@ -89,18 +86,21 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  password
                 />
               </div>
               <Button type="submit" className="w-full">
-                Login
+                {loading ? "Logging in..." : "Login"}
               </Button>
             </form>
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full">
-              Sign in with Google
+            <Button
+              type="submit"
+              className="w-full mt-5 bg-gray-900 text-white hover:bg-black hover:text-white hover:border"
+              onClick={() => router.push("/reset-password")}
+            >
+              {"Reset Password"}
             </Button>
-          </CardFooter>
+          </CardContent>
         </Card>
       </motion.div>
     </div>
