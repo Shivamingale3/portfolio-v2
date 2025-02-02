@@ -1,6 +1,8 @@
 "use client";
 
+import ChangingRoute from "@/components/changingRoute";
 import CheckAuth from "@/components/checkAuth";
+import LoggingOut from "@/components/loggingOut";
 import { useSnackbarContext } from "@/components/snackbar/SnackbarProvider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -18,6 +20,7 @@ import {
   DialogTitle,
   IconButton,
 } from "@mui/material";
+import { set } from "date-fns";
 import {
   Briefcase,
   ChevronRight,
@@ -82,6 +85,8 @@ export default function DashboardLayout({
     profilePicture: "",
   });
 
+  const [changingRoute, setChangingRoute] = useState(false);
+
   const logoutUser = async () => {
     try {
       setLoggingOut(true);
@@ -90,6 +95,7 @@ export default function DashboardLayout({
         router.push("/login");
       }, 1000);
     } catch (error: any) {
+      setLoggingOut(true);
       addSnackbar({
         header: "Logout Failed",
         description: error.message,
@@ -107,6 +113,7 @@ export default function DashboardLayout({
       if (response.status === 200) {
         return response.data.data;
       } else {
+        setLoggingOut(true);
         router.push("/login");
         throw new Error({
           statusCode: 401,
@@ -114,6 +121,7 @@ export default function DashboardLayout({
         });
       }
     } catch (error: any) {
+      setLoggingOut(true);
       addSnackbar({
         header: "Session Failed! Log In again!",
         description: error.message,
@@ -125,6 +133,7 @@ export default function DashboardLayout({
   };
 
   useEffect(() => {
+    setChangingRoute(true); // Start showing loader
     const fetchUserData = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -156,6 +165,7 @@ export default function DashboardLayout({
     };
 
     fetchUserData();
+    setChangingRoute(false);
   }, [router]);
 
   return (
@@ -277,25 +287,8 @@ export default function DashboardLayout({
               {React.cloneElement(children as React.ReactElement, { userData })}
             </div>
 
-            {loggingOut && (
-              <Dialog open={loggingOut}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    backgroundColor: "black",
-                  }}
-                >
-                  <div className="flex flex-col items-center gap-4 p-5">
-                    <CircularProgress size={50} sx={{ color: "white" }} />
-                    <DialogTitle className="text-white">
-                      Logging Out...
-                    </DialogTitle>
-                  </div>
-                </div>
-              </Dialog>
-            )}
+            {loggingOut && <LoggingOut loggingOut={loggingOut} />}
+            {changingRoute && <ChangingRoute changingRoute={changingRoute} />}
           </main>
         </div>
       )}
