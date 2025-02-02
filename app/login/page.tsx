@@ -1,5 +1,5 @@
 "use client";
-
+import { useSnackbarContext } from "@/components/snackbar/SnackbarProvider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,7 +14,6 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { loginUser } from "../api/auth/login/route";
-import { useSnackbarContext } from "@/components/snackbar/SnackbarProvider";
 
 export default function Login() {
   const [loading, setLoading] = useState(false);

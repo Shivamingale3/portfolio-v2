@@ -11,6 +11,13 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import axiosInstance from "@/lib/axiosInstance";
+import {
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  IconButton,
+} from "@mui/material";
 import {
   Briefcase,
   ChevronRight,
@@ -21,10 +28,10 @@ import {
   User2,
   Wrench,
 } from "lucide-react";
+import Error from "next/error";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { SiRipple } from "react-icons/si";
+import React, { useEffect, useState } from "react";
 
 const sidebarItems = [
   {
@@ -64,37 +71,92 @@ export default function DashboardLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
-  const [logginOut, setLoggingOut] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [userData, setUserData] = useState({
+    id: "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    profilePicture: "",
+  });
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      router.push("/login"); // Redirect to login if not authenticated
-    } else {
-      setLoading(false);
-    }
-  }, [router]);
-
-  function logoutUser() {
+  const logoutUser = async () => {
     try {
       setLoggingOut(true);
-      // No need for backend logout if using localStorage, just clear the token
-      localStorage.removeItem("token");
-      router.push("/login"); // Redirect to login page
+      setTimeout(() => {
+        localStorage.removeItem("token");
+        router.push("/login");
+      }, 1000);
     } catch (error: any) {
       addSnackbar({
-        header: "Login Failed",
+        header: "Logout Failed",
         description: error.message,
         expandedContent: JSON.stringify(error),
         status: "error",
         timeout: 5000,
       });
-    } finally {
-      setLoggingOut(false);
+      setLoggingOut(false); // Only reset on error
     }
-  }
+  };
+
+  const getUserData = async () => {
+    try {
+      const response = await axiosInstance.get("/auth/verify-user");
+      if (response.status === 200) {
+        return response.data.data;
+      } else {
+        router.push("/login");
+        throw new Error({
+          statusCode: 401,
+          title: "User could not be verified",
+        });
+      }
+    } catch (error: any) {
+      addSnackbar({
+        header: "Session Failed! Log In again!",
+        description: error.message,
+        expandedContent: JSON.stringify(error),
+        status: "error",
+        timeout: 5000,
+      });
+    }
+  };
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          addSnackbar({
+            header: "Session Expired! Log In failed!",
+            status: "error",
+            timeout: 5000,
+          });
+          router.push("/login");
+          return;
+        }
+
+        const userData = await getUserData();
+        if (!userData) {
+          addSnackbar({
+            header: "Session Expired! Log In again!",
+            status: "error",
+            timeout: 5000,
+          });
+          router.push("/login");
+        } else {
+          setUserData(userData);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
+
+    fetchUserData();
+  }, [router]);
 
   return (
     <>
@@ -105,32 +167,31 @@ export default function DashboardLayout({
           {/* Desktop Sidebar */}
           <aside
             className={`fixed hidden h-screen border-r border-gray-800 bg-black text-white md:block ${
-              isSidebarOpen ? "w-64" : "w-16"
+              isSidebarOpen ? "w-72" : "w-20"
             } transition-all duration-300`}
           >
-            <div className="flex h-full flex-col">
-              <div className="border-b p-4 ">
-                <div className="flex content-around">
-                  <Avatar>
-                    <AvatarImage src="/placeholder.svg" />
-                    <AvatarFallback>AD</AvatarFallback>
-                  </Avatar>
-                  {isSidebarOpen && (
-                    <div>
-                      <p className="font-medium">Admin User</p>
-                      <p className="text-sm text-gray-500">admin@example.com</p>
+            <div className="flex h-full flex-col w-full py-5">
+              <div
+                className="w-full flex flex-row justify-around items-center"
+                aria-label="profile-section"
+              >
+                <Avatar>
+                  <AvatarImage src={userData.profilePicture} />
+                  <AvatarFallback>AD</AvatarFallback>
+                </Avatar>
+                {isSidebarOpen && (
+                  <>
+                    <div className="ml-2 flex text-wrap flex-wrap">
+                      <p className="font-medium">{`${userData.firstName} ${userData.lastName}`}</p>
+                      <p className="text-sm text-gray-500 ">{userData.email}</p>
                     </div>
-                  )}
-                  <Button onClick={logoutUser}>
-                    <div className="border border-solid border-white h-min w-min p-1 rounded-sm bg-white text-black">
-                      {logginOut ? (
-                        <SiRipple color="#000000" size="small" />
-                      ) : (
+                    <IconButton onClick={logoutUser}>
+                      <div className="border border-solid border-white h-min w-min p-1 rounded-sm bg-white text-black">
                         <LogOut />
-                      )}
-                    </div>
-                  </Button>
-                </div>
+                      </div>
+                    </IconButton>
+                  </>
+                )}
               </div>
               <nav className="flex-1 space-y-2 p-4">
                 {sidebarItems.map((item) => (
@@ -212,7 +273,29 @@ export default function DashboardLayout({
               isSidebarOpen ? "md:ml-64" : ""
             }`}
           >
-            <div className="container mx-auto p-8">{children}</div>
+            <div className="container mx-auto p-8">
+              {React.cloneElement(children as React.ReactElement, { userData })}
+            </div>
+
+            {loggingOut && (
+              <Dialog open={loggingOut}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    backgroundColor: "black",
+                  }}
+                >
+                  <div className="flex flex-col items-center gap-4 p-5">
+                    <CircularProgress size={50} sx={{ color: "white" }} />
+                    <DialogTitle className="text-white">
+                      Logging Out...
+                    </DialogTitle>
+                  </div>
+                </div>
+              </Dialog>
+            )}
           </main>
         </div>
       )}
